@@ -4,7 +4,6 @@ from collections.abc import (
     Callable,
     Hashable,
     Iterable,
-    Iterator,
     Mapping,
     Sequence,
     Sized,
@@ -23,6 +22,8 @@ from typing import (
 
 from typing_extensions import Self, Unpack
 
+# pylint: disable=import-error,no-name-in-module
+from basilisp._lang.seq import SeqIterator as _SeqIterator
 from basilisp.lang.obj import LispObject as _LispObject
 from basilisp.lang.obj import PrintSettings, seq_lrepr
 
@@ -353,7 +354,7 @@ class IPersistentCollection(ISeqable[T]):
         raise NotImplementedError()
 
     @abstractmethod
-    def empty(self) -> "IPersistentCollection[T]":
+    def empty(self: Self) -> Self:
         raise NotImplementedError()
 
 
@@ -749,30 +750,6 @@ class ISeq(ILispObject, IPersistentCollection[T]):
 
     __slots__ = ()
 
-    class _SeqIter(Iterator[T_inner]):
-        """Stateful iterator for sequence types.
-
-        This is primarily useful for avoiding blowing the stack on a long (or infinite)
-        sequence. It is not safe to use `yield` statements to iterate over sequences,
-        since they accrete one Python stack frame per sequence element."""
-
-        __slots__ = ("_cur",)
-
-        def __init__(self, seq: "ISeq[T_inner]"):
-            self._cur = seq
-
-        def __next__(self):
-            if not self._cur:
-                raise StopIteration
-            v = self._cur.first
-            if self._cur.is_empty:
-                raise StopIteration
-            self._cur = self._cur.rest
-            return v
-
-        def __repr__(self):  # pragma: no cover
-            return repr(self._cur)
-
     @property
     @abstractmethod
     def is_empty(self) -> bool:
@@ -807,7 +784,7 @@ class ISeq(ILispObject, IPersistentCollection[T]):
         return hash(tuple(self))
 
     def __iter__(self):
-        return self._SeqIter(self)
+        return _SeqIterator(self)
 
 
 class IType(ABC):
